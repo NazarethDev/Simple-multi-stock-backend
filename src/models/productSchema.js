@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import { STORE_KEYS } from "./storeMap.js";
 
+const THREE_MONTHS = 60 * 60 * 24 * 90
+
 const productSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -13,7 +15,7 @@ const productSchema = new mongoose.Schema({
     expiresAt: {
         type: Date,
         required: true,
-        index: { expires: '0' }
+        index: { expires: THREE_MONTHS }
     },
     quantity: {
         type: Map,

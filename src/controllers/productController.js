@@ -47,15 +47,20 @@ export async function updateProductQuantity(req, res) {
 
 export async function getExpireSoonProducts(req, res) {
     try {
-        const { page = 1, limit = 15 } = req.query;
+        const {
+            page = 1,
+            limit = 15,
+            days = 15
+        } = req.query;
         const result = await expireSoonProductsService({
             page: Number(page),
-            limit: Number(limit)
+            limit: Number(limit),
+            days: Number(days)
         });
         return res.status(StatusCodes.OK).json(result);
     } catch (error) {
         return res
-            .status(StatusCodes.NOT_FOUND)
+            .status(StatusCodes.BAD_REQUEST)
             .json({ error: error.message })
     };
 }

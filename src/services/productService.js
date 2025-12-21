@@ -70,30 +70,44 @@ export async function updateProductService({ productId, store, quantity }) {
     return updateProduct;
 };
 
-export async function expireSoonProductsService({ page = 1, limit = 15 }) {
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
+export async function expireSoonProductsService({ page = 1, limit = 15, days = 7 }) {
 
-    const futureDate = new Date(today);
-    futureDate.setUTCDate(today.getUTCDate() + 15);
+    if (days < 0) {
+        throw new Error("Datas devem ocorrer entre hoje e um dia futuro.")
+    }
+
+    const startDate = new Date();
+    startDate.setUTCHours(0, 0, 0, 0);
+
+    const endDate = new Date(startDate);
+    endDate.setUTCDate(startDate.getUTCDate() + days);
+    endDate.setUTCHours(23, 59, 59, 999)
 
     const skip = (page - 1) * limit;
 
+    const query = {
+        expiresAt: {
+            $gte: startDate,
+            $lte: endDate
+        }
+    };
+
     const [products, total] = await Promise.all([
-        Product.find({
-            expiresAt: { $gte: today, $lte: futureDate }
-        })
+        Product.find(query)
             .sort({ expiresAt: 1 })
             .skip(skip)
             .limit(limit),
 
-        Product.countDocuments({
-            expiresAt: { $gte: today, $lte: futureDate }
-        })
+        Product.countDocuments(query)
     ]);
 
     return {
         data: products,
+        filter: {
+            days,
+            from: startDate,
+            to: endDate
+        },
         pagination: {
             totalItems: total,
             totalPages: Math.ceil(total / limit),
