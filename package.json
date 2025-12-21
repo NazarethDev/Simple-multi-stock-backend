@@ -1,0 +1,23 @@
+{
+  "name": "simplemulti-stock",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Basic project for inventory management in retail businesses with diverse geographic locations and high turnover.",
+  "main": "app.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "keywords": [
+    "inventory",
+    "management"
+  ],
+  "author": "Lorran Nazareth",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "http-status-codes": "^2.3.0",
+    "mongoose": "^9.0.0"
+  }
+}
