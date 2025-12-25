@@ -1,4 +1,4 @@
-import { createProductService, updateProductService, expireSoonProductsService } from "../services/productService.js";
+import { createProductService, updateProductService, expireSoonProductsService, findByProductEanCodeService } from "../services/productService.js";
 import { StatusCodes } from "http-status-codes";
 
 export async function createProduct(req, res) {
@@ -62,4 +62,18 @@ export async function getExpireSoonProducts(req, res) {
             .status(StatusCodes.BAD_REQUEST)
             .json({ error: error.message })
     };
+}
+
+export async function findByProductEanCode(req, res) {
+    try {
+        const { eanCode } = req.params;
+
+        const products = await findByProductEanCodeService(eanCode);
+
+        return res.status(StatusCodes.OK).json(products);
+
+    } catch (error) {
+
+        return res.status(StatusCodes.NOT_FOUND).json({ message: error.message });
+    }
 }

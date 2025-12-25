@@ -28,4 +28,13 @@ export async function findExpiringSoonProducts({
         products,
         total
     };
+};
+
+export async function findProductByEanCode(eanCode) {
+    return await Product
+        .find({
+            eanCode,
+            expiresAt: { $gt: new Date() }
+        })
+        .sort({ expiresAt: 1 });
 }

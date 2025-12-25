@@ -2,8 +2,7 @@ import { STORE_KEYS } from "../models/storeMap.js";
 import Product from "../models/productSchema.js";
 import { StatusCodes } from "http-status-codes";
 import normalizeDate from "../utils/normalizeDate.js";
-// import { calculateTotalQuantity } from "../utils/productQuantity.js";
-import { findExpiringSoonProducts } from "../repositories/productRepository.js"
+import { findExpiringSoonProducts, findProductByEanCode } from "../repositories/productRepository.js"
 
 
 function getInitialQuantity() {
@@ -134,3 +133,22 @@ export async function expireSoonProductsService({ page = 1, limit = 15, days = 7
         }
     };
 };
+
+export async function findByProductEanCodeService(eanCode) {
+    const products = await findProductByEanCode(eanCode);
+
+    if (products.length === 0) {
+        throw new Error("Ean code not found")
+    }
+
+    const data = products.map(product => {
+        const obj = product.toObject();
+
+        return {
+            ...obj,
+            totalQuantity: calculateTotalQuantity(obj.quantity)
+        };
+    });
+
+    return data;
+}
