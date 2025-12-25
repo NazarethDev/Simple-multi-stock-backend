@@ -18,16 +18,13 @@ const productSchema = new mongoose.Schema({
         index: { expires: THREE_MONTHS }
     },
     quantity: {
-        type: Map,
-        of: {
-            type: Number,
-            min: 0
-        },
+        type: Object,
+        required: true,
         default: {},
 
         validate: {
-            validator: function (map) {
-                for (const key of map.keys()) {
+            validator: function (obj) {
+                for (const key of Object.keys(obj)) {
                     if (!STORE_KEYS.includes(key)) {
                         return false;
                     };

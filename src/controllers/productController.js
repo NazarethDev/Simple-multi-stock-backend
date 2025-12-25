@@ -15,7 +15,7 @@ export async function createProduct(req, res) {
 
     } catch (error) {
         return res
-            .status(error.status || error.BAD_REQUEST)
+            .status(error.status || StatusCodes.BAD_REQUEST)
             .json({
                 error: error.message,
                 error: error.product
@@ -26,12 +26,11 @@ export async function createProduct(req, res) {
 export async function updateProductQuantity(req, res) {
     try {
         const { productId } = req.params;
-        const { store, quantity } = req.body;
+        const { quantities } = req.body;
 
         const updatedProduct = await updateProductService({
             productId,
-            store,
-            quantity
+            quantities
         });
 
         return res
@@ -48,9 +47,9 @@ export async function updateProductQuantity(req, res) {
 export async function getExpireSoonProducts(req, res) {
     try {
         const {
-            page = 1,
-            limit = 15,
-            days = 15
+            page = req.page,
+            limit = req.limit,
+            days = req.days
         } = req.query;
         const result = await expireSoonProductsService({
             page: Number(page),

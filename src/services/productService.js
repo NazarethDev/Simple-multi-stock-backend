@@ -1,7 +1,9 @@
 import { STORE_KEYS } from "../models/storeMap.js";
 import Product from "../models/productSchema.js";
 import { StatusCodes } from "http-status-codes";
-import normalizeDate from "../utils/normalizeDate.js"
+import normalizeDate from "../utils/normalizeDate.js";
+// import { calculateTotalQuantity } from "../utils/productQuantity.js";
+import { findExpiringSoonProducts } from "../repositories/productRepository.js"
 
 
 function getInitialQuantity() {
@@ -9,14 +11,20 @@ function getInitialQuantity() {
         acc[store] = 0;
         return acc;
     }, {});
-};
+}
 
 async function findProduct(eanCode, expiresAt) {
     return await Product.findOne({
         eanCode,
         expiresAt
     });
-}
+};
+
+export function calculateTotalQuantity(quantity = {}) {
+    return Object.values(quantity)
+        .reduce((sum, value) => sum + value, 0);
+};
+
 
 export async function createProductService({ name, eanCode, expiresAt }) {
 
@@ -31,6 +39,8 @@ export async function createProductService({ name, eanCode, expiresAt }) {
         throw error;
     }
 
+    console.log("normalizedDate:", normalizedDate, normalizedDate instanceof Date);
+    console.log("quantity:", getInitialQuantity());
     const product = await Product.create({
         name,
         eanCode,
@@ -41,34 +51,44 @@ export async function createProductService({ name, eanCode, expiresAt }) {
     return product;
 };
 
-export async function updateProductService({ productId, store, quantity }) {
+export async function updateProductService({ productId, quantities }) {
 
-    if (!STORE_KEYS.includes(store)) {
-        throw new Error("Loja inválida");
-    };
+    if (!quantities || typeof quantities !== "object") {
+        throw new Error("Dados de quantidades enviados inválidos");
+    }
 
-    if (quantity < 0) {
-        throw new Error("Quantidade não pode ser inferior a 0.")
-    };
+    // valida tudo antes
+    for (const [store, quantity] of Object.entries(quantities)) {
+        if (!STORE_KEYS.includes(store)) {
+            throw new Error(`Loja inválida: ${store}`);
+        }
 
-    const updateProduct = await Product.findByIdAndUpdate(
+        if (quantity < 0) {
+            throw new Error(`Quantidade inválida para ${store}`);
+        }
+    }
+
+    const updatedProduct = await Product.findByIdAndUpdate(
         productId,
         {
             $set: {
-                [`quantity.${store}`]: quantity
+                quantity: quantities
             }
         },
-        { new: true, runValidators: true }
+        {
+            new: true,
+            runValidators: true
+        }
     );
 
-    if (!updateProduct) {
-        const error = new Error("Produto não encontrado.");
-        error.status = 404;
+    if (!updatedProduct) {
+        const error = new Error("Produto não encontrado");
+        error.status = StatusCodes.NOT_FOUND;
         throw error;
     }
 
-    return updateProduct;
-};
+    return updatedProduct;
+}
 
 export async function expireSoonProductsService({ page = 1, limit = 15, days = 7 }) {
 
@@ -83,26 +103,24 @@ export async function expireSoonProductsService({ page = 1, limit = 15, days = 7
     endDate.setUTCDate(startDate.getUTCDate() + days);
     endDate.setUTCHours(23, 59, 59, 999)
 
-    const skip = (page - 1) * limit;
+    const { products, total } = await findExpiringSoonProducts({
+        startDate,
+        endDate,
+        page,
+        limit
+    });
 
-    const query = {
-        expiresAt: {
-            $gte: startDate,
-            $lte: endDate
-        }
-    };
+    const data = products.map(product => {
+        const obj = product.toObject();
 
-    const [products, total] = await Promise.all([
-        Product.find(query)
-            .sort({ expiresAt: 1 })
-            .skip(skip)
-            .limit(limit),
-
-        Product.countDocuments(query)
-    ]);
+        return {
+            ...obj,
+            totalQuantity: calculateTotalQuantity(obj.quantity)
+        };
+    });
 
     return {
-        data: products,
+        data,
         filter: {
             days,
             from: startDate,
@@ -115,4 +133,4 @@ export async function expireSoonProductsService({ page = 1, limit = 15, days = 7
             itemsPerPage: limit
         }
     };
-}
+};
