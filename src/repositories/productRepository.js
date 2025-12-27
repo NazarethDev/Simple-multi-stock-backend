@@ -38,3 +38,11 @@ export async function findProductByEanCode(eanCode) {
         })
         .sort({ expiresAt: 1 });
 }
+
+export async function updateProductNameAndCostRepository(productId, updateData) {
+    return Product.findByIdAndUpdate(
+        productId,
+        { $set: updateData },
+        { new: true, runValidators: true }
+    );
+}

@@ -19,7 +19,6 @@ const productSchema = new mongoose.Schema({
     },
     quantity: {
         type: Object,
-        required: true,
         default: {},
 
         validate: {
@@ -34,11 +33,27 @@ const productSchema = new mongoose.Schema({
             message: "Loja inválida."
         }
     },
+    cost: {
+        type: Number,
+        required: true,
+        min: [0, "O custo não pode ser negativo"]
+    }
 });
 
 productSchema.index(
     { eanCode: 1, expiresAt: 1 },
     { unique: true }
 );
+
+productSchema.virtual("totalQuantity").get(function () {
+    return Object.values(this.quantity || {}).reduce((sum, v) => sum + v, 0);
+});
+
+productSchema.virtual("totalCost").get(function () {
+    return (this.totalQuantity || 0) * (this.cost || 0);
+});
+
+productSchema.set("toJSON", { virtuals: true });
+productSchema.set("toObject", { virtuals: true })
 
 export default mongoose.model("Product", productSchema);

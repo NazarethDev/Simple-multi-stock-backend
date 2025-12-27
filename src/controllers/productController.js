@@ -1,14 +1,15 @@
-import { createProductService, updateProductService, expireSoonProductsService, findByProductEanCodeService } from "../services/productService.js";
+import { createProductService, updateProductQuantityService, expireSoonProductsService, findByProductEanCodeService, updateProductCostAndNameService } from "../services/productService.js";
 import { StatusCodes } from "http-status-codes";
 
 export async function createProduct(req, res) {
     try {
-        const { name, eanCode, expiresAt } = req.body;
+        const { name, eanCode, expiresAt, cost } = req.body;
 
         const product = await createProductService({
             name,
             eanCode,
-            expiresAt
+            expiresAt,
+            cost
         });
 
         return res.status(StatusCodes.CREATED).json(product)
@@ -28,7 +29,7 @@ export async function updateProductQuantity(req, res) {
         const { productId } = req.params;
         const { quantities } = req.body;
 
-        const updatedProduct = await updateProductService({
+        const updatedProduct = await updateProductQuantityService({
             productId,
             quantities
         });
@@ -75,5 +76,24 @@ export async function findByProductEanCode(req, res) {
     } catch (error) {
 
         return res.status(StatusCodes.NOT_FOUND).json({ message: error.message });
+    }
+}
+
+export async function updateNameOrProductCostController(req, res) {
+    try {
+        const { id } = req.params;
+        const { productName, productCost } = req.body;
+
+
+        console.log("ID recebido: ", id)
+        const updatedProduct = await updateProductCostAndNameService({ id, productName, productCost });
+
+        return res
+            .status(StatusCodes.OK)
+            .json(updatedProduct);
+    } catch (error) {
+        return res
+            .status(error.status || StatusCodes.BAD_REQUEST)
+            .json({ error: error.message });
     }
 }

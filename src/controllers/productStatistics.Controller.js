@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
-import { expiredProductsByStoreService } from "../services/productsStatisticsServices.js";
+import { expiredProductsByStoreService, getExpiresCostsStatisticsService } from "../services/productsStatisticsServices.js";
 
-export async function getExpiredProductsByStore(req, res) {
+export async function getExpiredProductsByStoreController(req, res) {
 
     try {
         const { months } = req.query;
@@ -17,5 +17,21 @@ export async function getExpiredProductsByStore(req, res) {
         return res
             .status(error.status || StatusCodes.BAD_REQUEST)
             .json({ error: error.message });
-    }
+    };
+};
+
+export async function getExpiredCostStatisticsController(req, res) {
+    try {
+        const { months } = req.params;
+        const result = await getExpiresCostsStatisticsService(months);
+
+        return res
+            .status(StatusCodes.OK)
+            .json(result);
+
+    } catch (error) {
+        return res
+            .status(error.status || StatusCodes.BAD_REQUEST)
+            .json({ error: error.message });
+    };
 }

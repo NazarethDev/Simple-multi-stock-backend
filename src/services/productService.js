@@ -2,7 +2,7 @@ import { STORE_KEYS } from "../models/storeMap.js";
 import Product from "../models/productSchema.js";
 import { StatusCodes } from "http-status-codes";
 import normalizeDate from "../utils/normalizeDate.js";
-import { findExpiringSoonProducts, findProductByEanCode } from "../repositories/productRepository.js"
+import { findExpiringSoonProducts, findProductByEanCode, updateProductNameAndCostRepository } from "../repositories/productRepository.js"
 
 
 function getInitialQuantity() {
@@ -19,13 +19,14 @@ async function findProduct(eanCode, expiresAt) {
     });
 };
 
-export function calculateTotalQuantity(quantity = {}) {
-    return Object.values(quantity)
-        .reduce((sum, value) => sum + value, 0);
-};
 
+export async function createProductService({ name, eanCode, expiresAt, cost }) {
 
-export async function createProductService({ name, eanCode, expiresAt }) {
+    if (typeof cost !== "number" || cost < 0) {
+        const error = new Error("Invalid product cost");
+        error.status = StatusCodes.BAD_REQUEST;
+        throw error;
+    }
 
     const normalizedDate = normalizeDate(expiresAt);
 
@@ -38,25 +39,23 @@ export async function createProductService({ name, eanCode, expiresAt }) {
         throw error;
     }
 
-    console.log("normalizedDate:", normalizedDate, normalizedDate instanceof Date);
-    console.log("quantity:", getInitialQuantity());
     const product = await Product.create({
         name,
         eanCode,
         expiresAt: normalizedDate,
-        quantity: getInitialQuantity()
+        quantity: getInitialQuantity(),
+        cost
     });
 
     return product;
 };
 
-export async function updateProductService({ productId, quantities }) {
+export async function updateProductQuantityService({ productId, quantities }) {
 
     if (!quantities || typeof quantities !== "object") {
         throw new Error("Dados de quantidades enviados inválidos");
     }
 
-    // valida tudo antes
     for (const [store, quantity] of Object.entries(quantities)) {
         if (!STORE_KEYS.includes(store)) {
             throw new Error(`Loja inválida: ${store}`);
@@ -89,6 +88,35 @@ export async function updateProductService({ productId, quantities }) {
     return updatedProduct;
 }
 
+export async function updateProductCostAndNameService({ id, productName, productCost }) {
+    if (productName === undefined && productCost === undefined) {
+        const error = new Error("At least one field must be provided");
+        error.status = StatusCodes.BAD_REQUEST;
+        throw error;
+    }
+
+    const updateData = {};
+
+    if (productName !== undefined) {
+        updateData.name = productName;
+    };
+
+    if (productCost !== undefined) {
+        updateData.cost = productCost;
+    };
+
+    const updatedProduct = await updateProductNameAndCostRepository(id, updateData);
+
+    if (!updatedProduct) {
+        const error = new Error("Product not found");
+        error.status = StatusCodes.NOT_FOUND;
+        throw error;
+    }
+
+    return updatedProduct;
+
+}
+
 export async function expireSoonProductsService({ page = 1, limit = 15, days = 7 }) {
 
     if (days < 0) {
@@ -109,14 +137,7 @@ export async function expireSoonProductsService({ page = 1, limit = 15, days = 7
         limit
     });
 
-    const data = products.map(product => {
-        const obj = product.toObject();
-
-        return {
-            ...obj,
-            totalQuantity: calculateTotalQuantity(obj.quantity)
-        };
-    });
+    const data = products.map(product => product.toObject());
 
     return {
         data,
@@ -141,14 +162,7 @@ export async function findByProductEanCodeService(eanCode) {
         throw new Error("Ean code not found")
     }
 
-    const data = products.map(product => {
-        const obj = product.toObject();
-
-        return {
-            ...obj,
-            totalQuantity: calculateTotalQuantity(obj.quantity)
-        };
-    });
+    const data = products.map(product => product.toObject());
 
     return data;
 }
